@@ -72,10 +72,10 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
     // HINT 2: print the current ebp on the first line (not current_ebp[0])
 
 	int* curr_ebp = (int*) read_ebp(); 	
-	for(; *curr_ebp != 0x0; curr_ebp = (int*) (*curr_ebp))
+	for(; curr_ebp != 0x0; curr_ebp = (int*) (*curr_ebp))
 	{
 		int eip = curr_ebp[1];
-		cprintf("ebp %x eip %x ", *curr_ebp, eip);
+		cprintf("ebp %08x eip %08x ", (int) curr_ebp, eip);
 		cprintf("args %08x %08x %08x %08x\n", 
 					curr_ebp[2], 
 					curr_ebp[3], 

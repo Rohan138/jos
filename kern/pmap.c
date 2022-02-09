@@ -317,10 +317,10 @@ page_alloc(int alloc_flags)
     pp->pp_link = NULL;
 
     if(alloc_flags & ALLOC_ZERO) {
-        memset(pp,'\0',sizeof(struct PageInfo));
+        memset(page2kva(pp),0,PGSIZE);
     }
     
-	return page2kva(pp);
+	return pp;
 }
 
 //
@@ -577,6 +577,7 @@ check_page_alloc(void)
 	assert(pp0);
 	assert(pp1 && pp1 != pp0);
 	assert(pp2 && pp2 != pp1 && pp2 != pp0);
+    
 	assert(page2pa(pp0) < npages*PGSIZE);
 	assert(page2pa(pp1) < npages*PGSIZE);
 	assert(page2pa(pp2) < npages*PGSIZE);

@@ -379,7 +379,22 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+    pde_t pde = pgdir[PDX(va)];
+
+    if(pde & PTE_P) {
+        pde_t* page_table = (pde_t*) KADDR(PTE_ADDR(pde));
+        return &page_table[PTX(va)];
+    }
+    else if(create) {
+        struct PageInfo* pp_page_table = page_alloc(1);
+        if(pp_page_table) {
+            pp_page_table->pp_ref += 1
+            pgdir[PDX(va)] = page2pa(pp_page_table) | PTE_P | PTE_U | PTE_W;
+            pde_t* page_table = (pde_t*) KADDR(PTE_ADDR(pgdir[PDX(va)]));
+            return &page_table[PTX(va)];
+        }
+    }   
+    return NULL;
 }
 
 //
@@ -397,6 +412,10 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
+    for(int i = 0; i < size; i++) {
+        pte_t* p_pte = pgdir_walk(pgdir,va+i,1);
+        *p_pte = PTE_ADR(pa+i) | PTE_P | perm;
+    }
 }
 
 //
@@ -428,7 +447,13 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
-	return 0;
+    pte_t* pte = pgdir_walk(pgdir,va,0);
+    if(pte && *pte) {
+       page_remove(pgdir,va);     
+       assert(!*pte);
+    }
+    
+	return -E_NO_MEM;
 }
 
 //
@@ -446,7 +471,10 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
-	return NULL;
+    pte_t* p_pte = pgdir_walk(pgdir,va,0);
+    if(pte_store) *pte_store = p_pte;
+    if(!p_pte) return NULL;
+    return pa2page(PTE_ADDR(*p_pte));
 }
 
 //
@@ -468,6 +496,14 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
+    pte_t* p_pte;
+    struct PageInfo* page = page_lookup(pgdir,va,&p_pte);
+
+    if(page) {
+        page_decref(page);
+        *p_pte = 0;
+        tlb_invalidate(pgdir,va);
+    }
 }
 
 //

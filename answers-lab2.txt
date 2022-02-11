@@ -1,0 +1,84 @@
+5a. 
+
+Entry for kern_pgdir in itself
+957 f011b000
+
+Pages mapped at linear address UPAGES
+956 f03fd000
+
+bootstack mapped for kernel stack
+959 f03fe000
+
+All of physical memory
+960 f03ff000
+961 f03fc000
+962 f03fb000
+963 f03fa000
+964 f03f9000
+965 f03f8000
+966 f03f7000
+967 f03f6000
+968 f03f5000
+969 f03f4000
+970 f03f3000
+971 f03f2000
+972 f03f1000
+973 f03f0000
+974 f03ef000
+975 f03ee000
+976 f03ed000
+977 f03ec000
+978 f03eb000
+979 f03ea000
+980 f03e9000
+981 f03e8000
+982 f03e7000
+983 f03e6000
+984 f03e5000
+985 f03e4000
+986 f03e3000
+987 f03e2000
+988 f03e1000
+989 f03e0000
+990 f03df000
+991 f03de000
+992 f03dd000
+993 f03dc000
+994 f03db000
+995 f03da000
+996 f03d9000
+997 f03d8000
+998 f03d7000
+999 f03d6000
+1000 f03d5000
+1001 f03d4000
+1002 f03d3000
+1003 f03d2000
+1004 f03d1000
+1005 f03d0000
+1006 f03cf000
+1007 f03ce000
+1008 f03cd000
+1009 f03cc000
+1010 f03cb000
+1011 f03ca000
+1012 f03c9000
+1013 f03c8000
+1014 f03c7000
+1015 f03c6000
+1016 f03c5000
+1017 f03c4000
+1018 f03c3000
+1019 f03c2000
+1020 f03c1000
+1021 f03c0000
+1022 f03bf000
+1023 f03be000
+
+5b. The page tables have read write permissions from virtual and physical memory, where the user cannot read or write from the kernel memory. Users can only access virtual memory and given that the security is set through the page tables, the user can only access certain parts of the physical memory so it is protected. Additionally, the kernel has a higher access privilege (ring 0) than the user (ring 3), so the kernel can access the user's memory but not vice versa.
+
+5c. 4GB, max value of 32bit addressing ranges from 0xf0000000 to 0xffffffff which spans 4GB.
+
+5d. Slightly over 4MB. If we have the 4GB of physical memory then we would need to map the 4GB of memory to page tables. Each page table is 32 bits (4 bytes) and corresponds to 4kb of physical memory, therefore we would have 1000000 page tables across 1000 page directories. Each of the page table would need to be stored in a page directory, so the total would be slightly over 4MB.
+
+5e. When paging is initialized, we are still in kern/entry.S and have a low EIP to execute assembly. All C pointers and C code is above KERNBASE since C is linked in virtual memory. This virtual memory is not initialized until we initialize paging. We transition to a high EIP before we call i386_init in kern/init.c from kern/entry.S. The transition is necessary to run C code.

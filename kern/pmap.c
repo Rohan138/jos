@@ -185,6 +185,7 @@ mem_init(void)
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, UPAGES, pages_size, PADDR(pages), PTE_U | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -197,6 +198,7 @@ mem_init(void)
 	//       overwrite memory.  Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_P | PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map all of physical memory at KERNBASE.
@@ -206,6 +208,7 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
+	boot_map_region(kern_pgdir, KERNBASE, -KERNBASE, 0, PTE_P | PTE_W);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -391,7 +394,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
         if(pp_page_table) {
             pp_page_table->pp_ref += 1;
             pgdir[PDX(va)] = page2pa(pp_page_table) | PTE_P | PTE_U | PTE_W;
-            pde_t* page_table = (pde_t*) KADDR(PTE_ADDR(pgdir[PDX(va)]));
+            pde_t* page_table = (pde_t*) page2kva(pp_page_table);
             return &page_table[PTX(va)];
         }
     }   
@@ -414,8 +417,8 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Fill this function in
     for(int i = 0; i < size; i++) {
-        pte_t* p_pte = pgdir_walk(pgdir,&va[i],1);
-        *p_pte = PTE_ADDR(&pa[i]) | PTE_P | perm;
+        pte_t* p_pte = pgdir_walk(pgdir,(const void*)(va + i),1);
+        *p_pte = PTE_ADDR(pa + i) | PTE_P | perm;
     }
 }
 
@@ -450,8 +453,11 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Fill this function in
     pte_t* p_pte = pgdir_walk(pgdir,va,1);
     if(!p_pte) return -E_NO_MEM;
-
-    if(*p_pte) page_remove(pgdir,va);
+	pp->pp_ref += 1;
+    if(*p_pte & PTE_P){
+		page_remove(pgdir,va);
+		tlb_invalidate(pgdir,va);
+	}
     *p_pte = PTE_ADDR(page2pa(pp)) | perm | PTE_P; 
 
 	return 0;
@@ -473,8 +479,8 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
     pte_t* p_pte = pgdir_walk(pgdir,va,0);
+    if(!p_pte || !(*p_pte & PTE_P)) return NULL;
     if(pte_store) *pte_store = p_pte;
-    if(!p_pte) return NULL;
     return pa2page(PTE_ADDR(*p_pte));
 }
 

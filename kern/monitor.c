@@ -14,6 +14,13 @@
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
+#define ANSI_RED "\x1b[31m"
+#define ANSI_GREEN "\x1b[32m"
+#define ANSI_YELLOW "\x1b[33m"
+#define ANSI_BLUE "\x1b[34m"
+#define ANSI_MAGENTA "\x1b[35m"
+#define ANSI_CYAN "\x1b[36m"
+#define ANSI_RESET "\x1b[37m"
 
 struct Command {
 	const char *name;
@@ -26,6 +33,8 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "show", "Print ascii art", mon_show },
+	{ "backtrace", "backtraces through commands", mon_backtrace },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -62,6 +71,41 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	// LAB 1: Your code here.
     // HINT 1: use read_ebp().
     // HINT 2: print the current ebp on the first line (not current_ebp[0])
+
+	int* curr_ebp = (int*) read_ebp(); 	
+	for(; curr_ebp != 0x0; curr_ebp = (int*) (*curr_ebp))
+	{
+		int eip = curr_ebp[1];
+		cprintf("ebp %08x eip %08x ", (int) curr_ebp, eip);
+		cprintf("args %08x %08x %08x %08x\n", 
+					curr_ebp[2], 
+					curr_ebp[3], 
+					curr_ebp[4], 
+					curr_ebp[5]);
+
+		struct Eipdebuginfo debug_info; 
+		debuginfo_eip(eip, &debug_info);
+		int offset = eip - debug_info.eip_fn_addr;
+			
+		cprintf("       %s:%d: %.*s+%d\n",
+					debug_info.eip_file, 
+				        debug_info.eip_line,
+				        debug_info.eip_fn_namelen,
+				        debug_info.eip_fn_name,
+				        offset);
+	}	
+
+	return 0;
+}
+
+int mon_show(int argc, char **argv, struct Trapframe *tf)
+{
+	cprintf(ANSI_RED "Hello!\n" ANSI_RESET);	
+	cprintf(ANSI_GREEN "Raghava" ANSI_RESET);	
+	cprintf(ANSI_BLUE " and" ANSI_RESET);	
+	cprintf(ANSI_MAGENTA " Rohan" ANSI_RESET);	
+	cprintf(ANSI_CYAN " love" ANSI_RESET);	
+	cprintf(ANSI_YELLOW " paneer!\n" ANSI_RESET);	
 	return 0;
 }
 

@@ -1,0 +1,2 @@
+1. Using different interrupt handlers for different interrupts allows us to distinguish between the events that generate these interrupts and handle them accordingly.
+2. No; the softint code calls int 14, but since it is running with user privileges only (DPL = 3), while the softint handler has been inserted into the IDT with DPL 0. Thus, the $int 14$ instruction will actually cause a general protection fault instead, since the user is trying to call an interrupt it is not allowed to call.

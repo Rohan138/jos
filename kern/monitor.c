@@ -111,7 +111,7 @@ int mon_show(int argc, char **argv, struct Trapframe *tf)
 }
 
 int mon_si(int argc, char **argv, struct Trapframe *tf){
-	cprintf("Not implemented mon_si yet\n")
+	cprintf("Not implemented mon_si yet\n");
 	return 0;
 }
 

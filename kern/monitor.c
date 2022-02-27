@@ -35,6 +35,7 @@ static struct Command commands[] = {
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "show", "Print ascii art", mon_show },
 	{ "backtrace", "backtraces through commands", mon_backtrace },
+	{ "si", "Step through one instruction at a time", mon_si },
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -109,7 +110,10 @@ int mon_show(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
-
+int mon_si(int argc, char **argv, struct Trapframe *tf){
+	cprintf("Not implemented mon_si yet\n")
+	return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 

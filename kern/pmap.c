@@ -15,10 +15,9 @@ size_t npages;			// Amount of physical memory (in pages)
 static size_t npages_basemem;	// Amount of base memory (in pages)
 
 // These variables are set in mem_init()
+pde_t *kern_pgdir;		// Kernel's initial page directory
 struct PageInfo *pages;		// Physical page state array
 static struct PageInfo *page_free_list;	// Free list of physical pages
-
-pde_t *kern_pgdir;		// Kernel's initial page directory
 
 // --------------------------------------------------------------
 // Detect machine's physical memory setup.
@@ -103,7 +102,7 @@ boot_alloc(uint32_t n)
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
-    if(!n) {
+    if(n == 0) {
         return nextfree;
     }
     else {
@@ -141,8 +140,6 @@ mem_init(void)
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
-	cprintf("%x\n",kern_pgdir);
-	cprintf("%x\n",&kern_pgdir);
 	memset(kern_pgdir, 0, PGSIZE);
 
 	//////////////////////////////////////////////////////////////////////
@@ -198,7 +195,6 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 	boot_map_region(kern_pgdir, UPAGES, pages_size, PADDR(pages), PTE_U | PTE_P);
-	boot_map_region(kern_pgdir, (uintptr_t) pages, pages_size, PADDR(pages), PTE_W | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
@@ -208,7 +204,6 @@ mem_init(void)
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
 	boot_map_region(kern_pgdir, UENVS, envs_size, PADDR(envs), PTE_U | PTE_P);
-	boot_map_region(kern_pgdir, (uintptr_t) envs, envs_size, PADDR(envs), PTE_W | PTE_P);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -418,7 +413,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
         if(pp_page_table) {
             pp_page_table->pp_ref += 1;
             pgdir[PDX(va)] = page2pa(pp_page_table) | PTE_P | PTE_U | PTE_W;
-            pde_t* page_table = (pde_t*) page2kva(pp_page_table);
+            pde_t* page_table = (pde_t*) KADDR(PTE_ADDR(pgdir[PDX(va)]));
             return &page_table[PTX(va)];
         }
     }   
@@ -440,8 +435,9 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
-    for(int i = 0; i < size; i++) {
+    for(int i = 0; i < size; i += PGSIZE) {
         pte_t* p_pte = pgdir_walk(pgdir,(const void*)(va + i),1);
+		if(p_pte == NULL) panic("Could not map page!\n");
         *p_pte = PTE_ADDR(pa + i) | PTE_P | perm;
     }
 }

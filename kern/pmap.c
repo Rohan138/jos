@@ -196,7 +196,8 @@ mem_init(void)
 	//      (ie. perm = PTE_U | PTE_P)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir, UPAGES, pages_size, PADDR(pages), PTE_U | PTE_P);
+	boot_map_region(kern_pgdir, UPAGES, pages_size, PADDR(pages), PTE_U);
+	boot_map_region(kern_pgdir, (uintptr_t) pages, pages_size, PADDR(pages), PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
 	// Map the 'envs' array read-only by the user at linear address UENVS
@@ -205,7 +206,8 @@ mem_init(void)
 	//    - the new image at UENVS  -- kernel R, user R
 	//    - envs itself -- kernel RW, user NONE
 	// LAB 3: Your code here.
-	boot_map_region(kern_pgdir, UENVS, envs_size, PADDR(envs), PTE_U | PTE_P);
+	boot_map_region(kern_pgdir, UENVS, envs_size, PADDR(envs), PTE_U);
+	boot_map_region(kern_pgdir, (uintptr_t) envs, envs_size, PADDR(envs), PTE_W);
 
 	//////////////////////////////////////////////////////////////////////
 	// Use the physical memory that 'bootstack' refers to as the kernel
@@ -624,7 +626,7 @@ mmio_map_region(physaddr_t pa, size_t size)
 	pa = ROUNDDOWN(pa, PGSIZE);
 	size = ROUNDUP(size, PGSIZE);
 	if(base + size > MMIOLIM) panic("Not enough MMIO space!");
-	boot_map_region(kern_pgdir, prev, size, pa, PTE_PCD|PTE_PWT|PTE_W);
+	boot_map_region(kern_pgdir, base, size, pa, PTE_PCD|PTE_PWT|PTE_W);
 	base += size;
 	return (void*)(prev + pa_offset);
 }

@@ -135,7 +135,7 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 	struct Env* e = NULL;
 	int ret = envid2env(envid, &e, 1);
 	if(ret < 0) return ret;
-	e->env_pgfault_upcall = f;
+	e->env_pgfault_upcall = func;
 	return 0;
 }
 
@@ -325,6 +325,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_yield: sys_yield();
 		case SYS_exofork: return sys_exofork();
 		case SYS_env_set_status: return sys_env_set_status((envid_t) a1, a2);
+		case SYS_env_set_pgfault_upcall: return sys_env_set_pgfault_upcall((envid_t) a1, (void*) a2);
 		case SYS_page_alloc: return sys_page_alloc((envid_t) a1, (void*) a2, a3);
 		case SYS_page_map: return sys_page_map((envid_t) a1, (void*) a2, (envid_t) a3, (void*) a4, a5);
 		case SYS_page_unmap: return sys_page_unmap((envid_t) a1, (void*) a2);

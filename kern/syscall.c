@@ -167,7 +167,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 
 	// LAB 4: Your code here.
 	if ((uintptr_t) va >= UTOP || PGOFF(va)) return -E_INVAL;
-	if (!(perm & (PTE_P | PTE_U)) || (perm & 0xfff & ~PTE_SYSCALL)) return -E_INVAL;
+	if (!(perm & (PTE_P | PTE_U)) || (perm & ~PTE_SYSCALL)) return -E_INVAL;
 	struct Env* e = NULL;
 	int ret = envid2env(envid, &e, 1);
 	if(ret < 0) return ret;
@@ -206,7 +206,7 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	if (!(perm & (PTE_P | PTE_U)) || (perm & 0xfff & ~PTE_SYSCALL)) return -E_INVAL;
+	if (!(perm & (PTE_P | PTE_U)) || (perm & ~PTE_SYSCALL)) return -E_INVAL;
 	if ((uintptr_t) srcva >= UTOP || PGOFF(srcva)) return -E_INVAL;
 	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) return -E_INVAL;
 	int ret;
@@ -286,8 +286,32 @@ sys_page_unmap(envid_t envid, void *va)
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
-	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	struct Env* target = NULL;
+	int r;
+	r = envid2env(envid, &target, 0);
+	if(r < 0) return r;
+	if(!target->env_ipc_recving) return -E_IPC_NOT_RECV;
+	if(srcva < (void*) UTOP){
+		if(PGOFF(srcva)) return -E_INVAL;
+		if (!(perm & (PTE_P | PTE_U)) || (perm & ~PTE_SYSCALL)) return -E_INVAL;
+		pte_t* pte;
+		struct PageInfo* page = page_lookup(curenv->env_pgdir, srcva, &pte);
+		if(!page) return -E_INVAL;
+		if((perm & PTE_W) && !(*pte & PTE_W)) return -E_INVAL;
+		if(target->env_ipc_dstva < (void*) UTOP){
+			r = page_insert(target->env_pgdir, page, target->env_ipc_dstva, perm);
+			if(r < 0) return r;
+			target->env_ipc_perm = perm;
+		}
+		else target->env_ipc_perm = 0;
+	}
+	else target->env_ipc_perm = 0;
+	target->env_ipc_recving = false;
+	target->env_ipc_from = curenv->env_id;
+	target->env_ipc_value = value;
+	target->env_status = ENV_RUNNABLE;
+	target->env_tf.tf_regs.reg_eax = 0;
+	return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -305,8 +329,11 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
-	return 0;
+	if(dstva < (void*) UTOP && PGOFF(dstva) != 0) return -E_INVAL;
+	curenv->env_ipc_recving = true;
+	curenv->env_ipc_dstva = dstva;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	sched_yield();
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -329,6 +356,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		case SYS_page_alloc: return sys_page_alloc((envid_t) a1, (void*) a2, a3);
 		case SYS_page_map: return sys_page_map((envid_t) a1, (void*) a2, (envid_t) a3, (void*) a4, a5);
 		case SYS_page_unmap: return sys_page_unmap((envid_t) a1, (void*) a2);
+		case SYS_ipc_try_send: return sys_ipc_try_send((envid_t) a1, a2, (void*) a3, a4);
+		case SYS_ipc_recv: return sys_ipc_recv((void*) a1);
 		default: return -E_INVAL;
 	}
 }

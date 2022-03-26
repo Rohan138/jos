@@ -375,7 +375,7 @@ page_fault_handler(struct Trapframe *tf)
 	if(curenv->env_pgfault_upcall){
 		struct UTrapframe* utf;
 		uintptr_t utf_addr;
-		if(tf->tf_esp >= UXSTACKTOP - PGSIZE && tf->tf_esp <= USTACKTOP - 1)
+		if(tf->tf_esp >= UXSTACKTOP - PGSIZE && tf->tf_esp <= UXSTACKTOP - 1)
 			utf_addr = tf->tf_esp - 4 - sizeof(*utf);
 		else utf_addr = UXSTACKTOP - sizeof(*utf);
 		user_mem_assert(curenv, (void*) utf_addr, sizeof(*utf), PTE_W);

@@ -1,0 +1,11 @@
+2.1.
+The purpose of the MPBOOTPHYS macro is to directly calculate absolute addresses of symbols in the mpentry.S. This done because the load address of the mpentry.S code is different than its link address.
+
+5.1.
+This is for isolation and security of kernel and user execution. For example, if the stacks are shared with a CPU that is running important kernel code and another CPU code running malicious user code that overflows the stack, the security of the kernel executing kernel code is compromised.
+
+6.1.
+The pointer e points to the Env struct that is mapped to important information for the user environment such as the env's page_dir the saved registers. The location in physical memory of this struct that a certain Env pointer points to (and all Env structs) needs to be the same regardless of which address context we are in so that when we switch between environments again, we can load the correct values.
+
+6.2. 
+This ensures that the environment state between switching to/from user environments is preserved and during restoration that the state was just as how it was left. This happens in the env_alloc function in env.c and is called in sys_exofork.

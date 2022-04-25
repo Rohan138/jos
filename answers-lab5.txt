@@ -1,0 +1,1 @@
+No, we don't; the IOPL level is stored in the EFLAGS register, which we push and pop when switching registers as part of the trapframe.
